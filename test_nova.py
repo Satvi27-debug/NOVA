@@ -1,13 +1,17 @@
 """
 test_nova.py
 ============
-Comprehensive automated test suite for NOVA (Natural Offline Virtual Assistant).
+Comprehensive automated test suite for NOVA (Nimble Offline Virtual Assistant).
 Validates all Functional Requirements (FR-01 through FR-14), acceptance criteria,
-and non-functional reliability requirements.
+application flow, and non-functional reliability requirements.
 """
 
 import unittest
+import io
+import sys
 from datetime import datetime
+from unittest.mock import patch
+
 import greetings
 import datetime_utils
 import calculator
@@ -40,6 +44,15 @@ class TestNovaAssistant(unittest.TestCase):
         rec_msg = ai_concepts.recommend_activity(hour=10, user_name=self.user_name)
         self.assertIn("Priya", rec_msg)
 
+    def test_fr01_empty_name_handling(self):
+        """Verify that empty or whitespace-only name defaults cleanly to 'Friend'."""
+        with patch('builtins.input', return_value="   "):
+            captured = io.StringIO()
+            with patch('sys.stdout', captured):
+                name = greetings.get_user_name()
+            self.assertEqual(name, "Friend")
+            self.assertIn("No name entered", captured.getvalue())
+
     # -------------------------------------------------------------
     # FR-03: Date Reporting
     # -------------------------------------------------------------
@@ -57,7 +70,6 @@ class TestNovaAssistant(unittest.TestCase):
         """Test that current time is accurately returned and formatted."""
         time_str = datetime_utils.get_current_time()
         self.assertIn("It's currently", time_str)
-        # Check for AM or PM
         self.assertTrue("AM" in time_str or "PM" in time_str)
 
     # -------------------------------------------------------------
@@ -70,6 +82,7 @@ class TestNovaAssistant(unittest.TestCase):
         self.assertEqual(calculator.calculate(7, "*", 6), "The result is 42")
         self.assertEqual(calculator.calculate(15, "/", 3), "The result is 5")
         self.assertEqual(calculator.calculate(7, "/", 2), "The result is 3.5")
+        self.assertEqual(calculator.calculate(-5, "+", 10), "The result is 5")
 
     def test_fr05_calculator_division_by_zero(self):
         """Test graceful division by zero handling."""
@@ -83,11 +96,11 @@ class TestNovaAssistant(unittest.TestCase):
         self.assertIn("20", calculator.parse_expression("calculate 12 + 8"))
         self.assertIn("15", calculator.parse_expression("10 + 5"))
         self.assertIn("50", calculator.parse_expression("calc 100 / 2"))
-        
+
         # Malformed inputs
         err_res = calculator.parse_expression("calculate abc + def")
         self.assertIn("Invalid calculation format", err_res)
-        
+
         err_res2 = calculator.parse_expression("not a formula")
         self.assertIn("Invalid calculation format", err_res2)
 
@@ -116,15 +129,83 @@ class TestNovaAssistant(unittest.TestCase):
         self.assertGreaterEqual(len(facts), 2, "Expected at least 2 distinct facts over 10 draws.")
 
     # -------------------------------------------------------------
-    # FR-09: Number Guessing Game Logic
+    # FR-09: Number Guessing Game Logic (Strengthened Coverage)
     # -------------------------------------------------------------
-    def test_fr09_game_bounds(self):
-        """Verify game settings conform to PRD (1 to 20 range, 5 attempts)."""
+    def test_fr09_game_bounds_and_range(self):
+        """Verify game settings conform to PRD (1 to 20 range, 5 attempts) and random targets stay within bounds."""
         import inspect
         sig = inspect.signature(game.play_guessing_game)
         self.assertEqual(sig.parameters['max_attempts'].default, 5)
         self.assertEqual(sig.parameters['lower_bound'].default, 1)
         self.assertEqual(sig.parameters['upper_bound'].default, 20)
+
+        # Range verification across 100 random numbers
+        import random
+        for _ in range(100):
+            target = random.randint(1, 20)
+            self.assertTrue(1 <= target <= 20)
+
+    def test_fr09_game_hints_higher_lower(self):
+        """Verify that game gives correct higher/lower feedback."""
+        inputs = iter(["5", "15", "10"])
+        captured = io.StringIO()
+        with patch('sys.stdout', captured):
+            won = game.play_guessing_game(
+                user_name=self.user_name,
+                max_attempts=5,
+                target_number=10,
+                input_func=lambda prompt: next(inputs)
+            )
+        output = captured.getvalue()
+        self.assertIn("Too low! Try a higher number.", output)
+        self.assertIn("Too high! Try a lower number.", output)
+        self.assertTrue(won)
+
+    def test_fr09_game_successful_guess(self):
+        """Verify winning message and correct attempt tracking."""
+        inputs = iter(["7"])
+        captured = io.StringIO()
+        with patch('sys.stdout', captured):
+            won = game.play_guessing_game(
+                user_name=self.user_name,
+                max_attempts=5,
+                target_number=7,
+                input_func=lambda prompt: next(inputs)
+            )
+        output = captured.getvalue()
+        self.assertIn("Congratulations, Priya! You guessed the number 7 in 1 try!", output)
+        self.assertTrue(won)
+
+    def test_fr09_game_unsuccessful_exhausted_attempts(self):
+        """Verify that game enforces the 5-attempt limit and displays game over message."""
+        inputs = iter(["1", "2", "3", "4", "5"])
+        captured = io.StringIO()
+        with patch('sys.stdout', captured):
+            won = game.play_guessing_game(
+                user_name=self.user_name,
+                max_attempts=5,
+                target_number=18,
+                input_func=lambda prompt: next(inputs)
+            )
+        output = captured.getvalue()
+        self.assertIn("Game over! The number was 18. Better luck next time, Priya!", output)
+        self.assertFalse(won)
+
+    def test_fr09_game_invalid_input_handling(self):
+        """Verify non-numeric input is handled without crashing or consuming attempts unfairly."""
+        inputs = iter(["notanumber", "10"])
+        captured = io.StringIO()
+        with patch('sys.stdout', captured):
+            won = game.play_guessing_game(
+                user_name=self.user_name,
+                max_attempts=5,
+                target_number=10,
+                input_func=lambda prompt: next(inputs)
+            )
+        output = captured.getvalue()
+        self.assertIn("Please enter a valid whole number.", output)
+        self.assertIn("Congratulations, Priya!", output)
+        self.assertTrue(won)
 
     # -------------------------------------------------------------
     # FR-10: Help Menu
@@ -140,19 +221,22 @@ class TestNovaAssistant(unittest.TestCase):
             self.assertIn(cmd, help_text)
 
     # -------------------------------------------------------------
-    # FR-11: Graceful Exit
+    # FR-11: Graceful Exit & Loop Termination
     # -------------------------------------------------------------
-    def test_fr11_graceful_exit(self):
-        """Test that exit commands return False to signal loop termination."""
-        for exit_word in ("exit", "quit", "bye", "goodbye"):
-            should_continue = main.route_command(exit_word, self.user_name)
+    def test_fr11_graceful_exit_and_aliases(self):
+        """Test that all exit aliases return False and print personalized farewell."""
+        for exit_word in ("exit", "quit", "bye", "goodbye", "close"):
+            captured = io.StringIO()
+            with patch('sys.stdout', captured):
+                should_continue = main.route_command(exit_word, self.user_name)
             self.assertFalse(should_continue, f"Command '{exit_word}' should signal exit.")
+            self.assertIn("Goodbye, Priya! Have a great day.", captured.getvalue())
 
     # -------------------------------------------------------------
     # FR-12: Fallback on Unrecognized Input
     # -------------------------------------------------------------
     def test_fr12_fallback_handling(self):
-        """Verify unrecognized inputs do not crash and keep the loop running."""
+        """Verify unrecognized inputs produce exact fallback message and keep loop running."""
         fallback_inputs = [
             "asdkfj",
             "what is the meaning of life",
@@ -161,8 +245,14 @@ class TestNovaAssistant(unittest.TestCase):
             "!@#$%^&*"
         ]
         for bad_input in fallback_inputs:
-            should_continue = main.route_command(bad_input, self.user_name)
+            captured = io.StringIO()
+            with patch('sys.stdout', captured):
+                should_continue = main.route_command(bad_input, self.user_name)
             self.assertTrue(should_continue, f"Input '{bad_input}' should not stop the loop.")
+            self.assertIn(
+                "Assistant: I'm not sure I understood that -- type 'help' to see what I can do.",
+                captured.getvalue()
+            )
 
     # -------------------------------------------------------------
     # FR-13: Rule-Based Recommendation (AI Concept)
@@ -186,27 +276,30 @@ class TestNovaAssistant(unittest.TestCase):
         self.assertIn("sleep", night.lower())
 
     # -------------------------------------------------------------
-    # FR-14: Perceptron Demonstration (DL Concept)
+    # FR-14: Perceptron Demonstration (DL Concept - 2 and 3 Inputs)
     # -------------------------------------------------------------
-    def test_fr14_perceptron_calculation(self):
-        """Test that perceptron correctly computes forward pass and activation."""
-        # Test step activation
-        self.assertEqual(ai_concepts.step_activation(1.5), 1)
-        self.assertEqual(ai_concepts.step_activation(-0.5), 0)
-        self.assertEqual(ai_concepts.step_activation(0.0), 0)
+    def test_fr14_perceptron_two_inputs(self):
+        """Verify that perceptron supports 2 numeric inputs without silently adding extra inputs."""
+        demo_output = ai_concepts.perceptron_demo(custom_inputs=[1.0, 0.5], interactive=False)
+        self.assertIn("Inputs (x)         : [1.0, 0.5]", demo_output)
+        self.assertIn("Weights (w)        : [0.6, 0.4]", demo_output)
+        self.assertIn("Calculation        : (1.0 * 0.6) + (0.5 * 0.4) + (-0.2)", demo_output)
+        self.assertIn("Final Output (y)   : 1", demo_output)
+        # Ensure 3rd default was NOT appended
+        self.assertNotIn("[1.0, 0.5, -0.8]", demo_output)
 
-        # Test single neuron calculation
-        # inputs = [1.0, 1.0], weights = [0.5, 0.5], bias = -0.8
-        # dot_product = 0.5 + 0.5 = 1.0; sum = 1.0 - 0.8 = 0.2 -> output = 1
-        res = ai_concepts.calculate_neuron([1.0, 1.0], [0.5, 0.5], -0.8)
-        self.assertEqual(res["output"], 1)
-
-        # Test perceptron demo string generation
+    def test_fr14_perceptron_three_inputs(self):
+        """Verify that perceptron supports 3 numeric inputs as allowed by the PRD."""
         demo_output = ai_concepts.perceptron_demo(custom_inputs=[1.0, 0.5, -0.8], interactive=False)
-        self.assertIn("Artificial Neuron (Perceptron)", demo_output)
-        self.assertIn("Step Function", demo_output)
-        self.assertIn("Final Output", demo_output)
-        self.assertIn("Hidden Layer Analogy", demo_output)
+        self.assertIn("Inputs (x)         : [1.0, 0.5, -0.8]", demo_output)
+        self.assertIn("Weights (w)        : [0.6, 0.4, -0.5]", demo_output)
+        self.assertIn("Final Output (y)   : 1", demo_output)
+
+    def test_fr14_perceptron_zero_activation(self):
+        """Verify that negative weighted sums produce output 0."""
+        # inputs = [-1.0, -1.0], weights = [0.6, 0.4], bias = -0.2 -> sum = -1.2 -> output = 0
+        demo_output = ai_concepts.perceptron_demo(custom_inputs=[-1.0, -1.0], interactive=False)
+        self.assertIn("Final Output (y)   : 0", demo_output)
 
     # -------------------------------------------------------------
     # Stress / Multi-Input Crash-Resistance Test (Section 29: 20+ Inputs)
@@ -234,6 +327,7 @@ class TestNovaAssistant(unittest.TestCase):
             "recommend",
             "activity",
             "perceptron",
+            "perceptron 1.0 0.5",
             "ai demo",
             "hello there",
             "good morning",

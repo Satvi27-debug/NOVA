@@ -11,7 +11,7 @@ PRD Compliance:
 """
 
 PROJECT_NAME = "NOVA"
-FULL_NAME = "Natural Offline Virtual Assistant"
+FULL_NAME = "Nimble Offline Virtual Assistant"
 TAGLINE = "Simple Commands. Smart Responses. Zero Internet."
 
 

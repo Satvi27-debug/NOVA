@@ -163,19 +163,41 @@ def perceptron_demo(
     inputs: List[float] = []
 
     if custom_inputs is not None:
-        inputs = [float(x) for x in custom_inputs[:3]]
+        valid_nums = []
+        for x in custom_inputs:
+            try:
+                valid_nums.append(float(x))
+            except (ValueError, TypeError):
+                pass
+        if len(valid_nums) in (2, 3):
+            inputs = valid_nums
+        elif len(valid_nums) > 3:
+            inputs = valid_nums[:3]
+        else:
+            inputs = [1.0, 0.5, -0.8]
     elif interactive:
         import sys
         if sys.stdin.isatty():
             print("Assistant: [Perceptron Demonstration]")
-            print("Enter 3 numbers between -2.0 and 2.0 (e.g. 1.0, 0.5, -0.8)")
+            print("Enter 2 or 3 numbers between -2.0 and 2.0 (e.g. '1.0 0.5' or '1.0 0.5 -0.8')")
             try:
-                raw = input("Enter inputs separated by spaces (or press Enter for default '1.0, 0.5, -0.8'): ").strip()
+                raw = input("Enter 2 or 3 inputs separated by spaces (or press Enter for default '1.0, 0.5, -0.8'): ").strip()
                 if raw:
                     # Support comma or space separated numbers
                     tokens = raw.replace(",", " ").split()
-                    for token in tokens[:3]:
-                        inputs.append(float(token))
+                    parsed = []
+                    for token in tokens:
+                        try:
+                            parsed.append(float(token))
+                        except ValueError:
+                            pass
+                    if len(parsed) in (2, 3):
+                        inputs = parsed
+                    elif len(parsed) > 3:
+                        inputs = parsed[:3]
+                    else:
+                        print("Assistant: At least 2 inputs required. Using standard default inputs.")
+                        inputs = [1.0, 0.5, -0.8]
             except (ValueError, EOFError, KeyboardInterrupt):
                 print("Assistant: Using standard default inputs.")
                 inputs = []
@@ -183,11 +205,12 @@ def perceptron_demo(
             # Non-interactive / automated testing environment
             inputs = [1.0, 0.5, -0.8]
 
-    # If fewer than 3 inputs provided, fill with defaults
-    while len(inputs) < 3:
-        inputs.append([1.0, 0.5, -0.8][len(inputs)])
+    # If no inputs provided (e.g. user pressed Enter), use standard default
+    if not inputs:
+        inputs = [1.0, 0.5, -0.8]
 
-    weights = DEFAULT_WEIGHTS
+    # Match weights directly to 2 or 3 inputs without adding extra inputs
+    weights = DEFAULT_WEIGHTS[:len(inputs)]
     bias = DEFAULT_BIAS
 
     res = calculate_neuron(inputs, weights, bias)

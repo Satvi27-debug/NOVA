@@ -19,7 +19,9 @@ def play_guessing_game(
     max_attempts: int = 5,
     lower_bound: int = 1,
     upper_bound: int = 20,
-) -> None:
+    target_number: int = None,
+    input_func = None,
+) -> bool:
     """
     Executes an interactive number-guessing game session.
 
@@ -28,8 +30,16 @@ def play_guessing_game(
         max_attempts (int): Maximum attempts permitted (default: 5).
         lower_bound (int): Lowest possible number in range (default: 1).
         upper_bound (int): Highest possible number in range (default: 20).
+        target_number (int, optional): Fixed target number (used in tests).
+        input_func (callable, optional): Custom input provider (used in tests).
+
+    Returns:
+        bool: True if won, False otherwise.
     """
-    target = random.randint(lower_bound, upper_bound)
+    if target_number is not None:
+        target = target_number
+    else:
+        target = random.randint(lower_bound, upper_bound)
     attempts_used = 0
 
     print(
@@ -37,24 +47,25 @@ def play_guessing_game(
         f"You have {max_attempts} tries."
     )
 
+    _reader = input_func if input_func is not None else input
+
     import sys
-    if not sys.stdin.isatty():
+    if input_func is None and not sys.stdin.isatty():
         print(f"Assistant: Interactive terminal not attached. Returning to main menu.")
-        return
+        return False
 
     while attempts_used < max_attempts:
-        remaining = max_attempts - attempts_used
         try:
             prompt = f"You (Guess {attempts_used + 1}/{max_attempts}): "
-            user_input = input(prompt).strip()
+            user_input = _reader(prompt).strip()
         except (EOFError, KeyboardInterrupt):
             print("\nAssistant: Game session aborted. Returning to main menu.")
-            return
+            return False
 
         # Check for quit/exit inside the game
         if user_input.lower() in ("exit", "quit", "cancel"):
             print(f"Assistant: Game cancelled! The number was {target}.")
-            return
+            return False
 
         # Validate numeric integer input
         try:
@@ -70,7 +81,7 @@ def play_guessing_game(
                 f"Assistant: Congratulations, {user_name}! You guessed the number "
                 f"{target} in {attempts_used} {'try' if attempts_used == 1 else 'tries'}!"
             )
-            return
+            return True
         elif guess < target:
             if attempts_used < max_attempts:
                 print("Assistant: Too low! Try a higher number.")
@@ -79,3 +90,4 @@ def play_guessing_game(
                 print("Assistant: Too high! Try a lower number.")
 
     print(f"Assistant: Game over! The number was {target}. Better luck next time, {user_name}!")
+    return False

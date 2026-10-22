@@ -1,8 +1,9 @@
-# NOVA — Natural Offline Virtual Assistant
+# NOVA — Nimble Offline Virtual Assistant
 
 > **Simple Commands. Smart Responses. Zero Internet.**
 
-NOVA is a lightweight, rule-based virtual assistant built with **pure Python standard library**. It runs completely offline in your terminal, providing instant responses with **zero external dependencies, zero APIs, and zero network calls**.
+NOVA is a lightweight, rule-based virtual assistant built with **pure Python standard library**. It runs completely offline in your terminal, providing instant responses with **zero external dependencies, zero APIs, and zero network calls** (*N* in NOVA stands for *Nimble*, meaning lightweight).
+Developed for the **AI Internship Program** (Project Code: `AI-INT-P1-VAA`).
 
 ---
 
@@ -48,10 +49,10 @@ Type any of the following commands when prompted by `You: `:
 
 ```text
 ==============================================================
-         NOVA -- Natural Offline Virtual Assistant
+         NOVA -- Nimble Offline Virtual Assistant
        Simple Commands. Smart Responses. Zero Internet.
 ==============================================================
-Assistant: Hi! I'm NOVA (Natural Offline Virtual Assistant). What's your name?
+Assistant: Hi! I'm NOVA (Nimble Offline Virtual Assistant). What's your name?
 You: Priya
 Assistant: Nice to meet you, Priya! Type 'help' to see what I can do.
 
@@ -87,7 +88,7 @@ NOVA/
 ├── game.py              # Interactive number guessing game
 ├── ai_concepts.py       # Rule-based recommendation & Perceptron demo
 ├── help_menu.py         # Formatted command help menu
-├── test_nova.py         # Automated test suite (16 test cases)
+├── test_nova.py         # Automated test suite (23 test cases)
 └── README.md            # Project documentation
 ```
 
@@ -99,7 +100,7 @@ NOVA/
 |---|---|---|
 | **Rule-Based AI** | `ai_concepts.py` | Uses explicit `if-elif-else` rules (decision tree) to recommend an activity based on the current hour. |
 | **Intent Recognition** | `main.py` | Uses keyword detection to route user input to the correct feature without external NLP models. |
-| **Artificial Neuron** | `ai_concepts.py` | Demonstrates a single Perceptron: multiplies inputs by weights, adds a bias ($z = \sum x_i w_i + b$), and applies a step activation function ($f(z) = 1 \text{ if } z > 0 \text{ else } 0$). |
+| **Artificial Neuron** | `ai_concepts.py` | Demonstrates a single Perceptron supporting 2 or 3 inputs: multiplies inputs by weights, adds a bias ($z = \sum x_i w_i + b$), and applies a step activation function ($f(z) = 1 \text{ if } z > 0 \text{ else } 0$). |
 | **Hidden Layer Analogy** | `ai_concepts.py` | Illustrates forward propagation through a simple 2-layer network. |
 
 > **Note**: NOVA uses deterministic rule-based logic and arithmetic demonstrations. It does **not** perform gradient descent, parameter training, or statistical inference.
@@ -129,5 +130,5 @@ All 14 Functional Requirements from the PRD were implemented and verified with a
 
 ### Test Suite Summary:
 ```text
-Ran 16 tests in 0.003s — OK (100% Pass Rate)
+Ran 23 tests in 0.009s — OK (100% Pass Rate)
 ```
