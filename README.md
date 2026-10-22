@@ -4,8 +4,6 @@
 
 NOVA is a lightweight, rule-based virtual assistant built with **pure Python standard library**. It runs completely offline in your terminal, providing instant responses with **zero external dependencies, zero APIs, and zero network calls**.
 
-Developed for the **Nexbridge Technologies AI Internship Program** (Project Code: `AI-INT-P1-VAA`).
-
 ---
 
 ## 🚀 Quick Start
